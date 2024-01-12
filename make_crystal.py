@@ -7,9 +7,9 @@ from matplotlib.widgets import Slider
 radius = 0.3
 fig, axs = plt.subplots(1, 3, figsize=(15, 1))
 fig.subplots_adjust(left=0.25, bottom=0.25)
-sc_cell = SimpleCubic('Cu', latticeconstant=1 ,size=(2, 2, 2))
-fcc_cell = FaceCenteredCubic('Cu', latticeconstant=1 ,size=(2, 2, 2))
-bcc_cell = BodyCenteredCubic('Cu', latticeconstant=1, size=(2,2,2)) 
+sc_cell = SimpleCubic('Cu', latticeconstant=2.56 ,size=(2, 2, 2))
+fcc_cell = FaceCenteredCubic('Cu', latticeconstant=3.62, size=(2, 2, 2))
+bcc_cell = BodyCenteredCubic('Cu', latticeconstant=2.96, size=(2,2,2)) 
 
 def make_plot(radius):
     for i in range(len(axs)): #clear every plot seprately
