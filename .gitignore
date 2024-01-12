@@ -3,3 +3,5 @@ test.py
 ase_slab.png
 test_lammps_file
 crystal_structure*
+config_out
+sc.traj
