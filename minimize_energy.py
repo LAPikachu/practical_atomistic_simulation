@@ -67,14 +67,14 @@ def fit_L_min_epot(func, dfunc, data_dict):
     return roots_dict, func_name 
 
 if __name__ =='__main__':
-    '''
+
     data_dict = {}
     for lattice_type in lattice_types:
         L_init = L_init_values[lattice_type]
         lattice_constants_list = calculate_latticeconst_epot_traj(lattice_type, L_init)
         data_dict[lattice_type] = write_data_dict(lattice_type, lattice_constants_list)
     save_data_to_json(data_dict, 'data_min_energy/epot_latticeconst')
-    '''
+
 
     with open('data_min_energy/epot_latticeconst', 'r') as data:
        data_dict = json.load(data)
