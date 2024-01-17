@@ -103,6 +103,15 @@ if __name__ =='__main__':
     fit is not really optimal
     2nd ord poly not ideal for theses kinds of curvature?
     '''
+    
+    def W_3rd_ord(L, p_0, p_1, p_2, p_3):
+        return p_0 + p_1 * L + p_2 * L ** 2 + p_3 * L ** 3
+    
+    def dW_3rd_ord(L, p_array):
+        return p_array[0] + 2 * p_array[1] * L + 3 * p_array[2] * L**2
+    
+    roots_dict, func_name = fit_L_min_epot(W_3rd_ord, dW_3rd_ord, data_dict)
+    roots_fit_dict[func_name] = roots_dict
 
     save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
     print("Lattice constants: \n"
