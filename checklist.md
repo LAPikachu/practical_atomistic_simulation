@@ -11,9 +11,9 @@ file:///C:/Users/Leon/FAUbox/WW8_Practical/Practical_4_Atomistic/04_MD%20(1).pdf
 
 ### Task 3
 - [x] 3.1 sketch fcc and bcc, estimate latice constants
-- [ ] 3.2 calculate min enegies
-- [ ] 3.3 write eq. for missing elast constats
-- [ ] 3.4 eq. for strain distributions
+- [x] 3.2 calculate min enegies
+- [x] 3.3 write eq. for missing elast constats
+- [x] 3.4 eq. for strain distributions
 - [ ] 3.5 evaluate elastic constants
 - [ ] 3.6 look at strain energy density, give range where assumption reasonable
 
