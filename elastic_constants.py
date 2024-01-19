@@ -10,14 +10,70 @@ from ase.optimize import BFGS
 
 #print(cell.cell[:]) # cell.cell only gives a 1-dim array type output :/ ?
 
+directory = 'data_elastic_constants/'
+
+class StrainTensor:
+    def __init__(self):
+        self.tensor = np.zeros((3,3))
+        
+    def make_tensor(self, type, eps):
+        if type == 'uniax':
+            self.uniax(eps)
+        elif type == 'biax':
+            self.biax(eps)
+        elif type == 'shear':
+            self.shear(eps)
+        else:
+             raise ValueError(f"No deform type {type}")
+    def uniax(self, eps):
+        self.tensor[0,0] = eps
+
+    def biax(self, eps):
+        self.tensor[0,0] = eps
+        self.tensor[1,1] = eps
+
+    def shear(self, eps):
+        self.tensor[0,1] = eps
+        self.tensor[1,0] = eps
+
+def deform_cell(cell, strain_tensor):
+    cell_array = cell.cell[:]
+    cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor)) # don't use * for multiplying matrices
+    cell.cell[:] = cell_array_new
+    return cell
+
 if __name__ == '__main__':
-    #make cell
+    #relax initial structur
     with open("data_min_energy\lattice_consts", "r") as file: #load lattice constant
         lattice_const_dict = json.load(file) 
     lattice_const = lattice_const_dict['W_3rd_ord']['fcc']
     cell = create_cubic_lattice('fcc', lattice_const)
     cell.calc = EMT()
     #relax cell  
-    relax_cell =  BFGS(cell, trajectory='data_elastic_constants/relaxed_cell.traj')
+    relax_cell =  BFGS(cell, trajectory=f'{directory}relaxed_cell.traj')
     relax_cell.run()
+    traj_relax = Trajectory(f'{directory}relaxed_cell.traj', 'r')
+    cell_relaxed = traj_relax[-1]
 
+    deform_types = ['uniax', 'biax', 'shear']
+    epsilons = np.linspace(-0.02,0.02, 20) #watch out: no big vals for eps 
+
+    for type in deform_types:
+
+        traj = Trajectory(f'{directory}{type}.traj', 'w')
+        traj.write(cell_relaxed)
+        traj = Trajectory(f'{directory}{type}.traj', 'r')
+        cell = traj[-1]
+        traj = Trajectory(f'{directory}{type}.traj', 'w')
+
+        tensor = StrainTensor()
+
+
+        for eps in epsilons:
+            tensor.make_tensor(type, eps)
+            cell = deform_cell(cell, tensor.tensor)
+            cell.calc = EMT()
+            cell.get_potential_energy()
+            traj.write(cell)
+                
+    
