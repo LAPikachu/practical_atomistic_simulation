@@ -28,7 +28,7 @@ def calculate_latticeconst_epot_traj(lattice_type, L_init):
     for L in np.linspace(L_init - 0.5 , L_init + 1, 100):
         lattice_constants_list.append(L) # append current lattice constant
         data = create_cubic_lattice(lattice_type, L)
-        data.calc = EMT()
+        data.set_calculator(EMT())
         data.get_potential_energy()
         traj_file.write(data)
     return lattice_constants_list
