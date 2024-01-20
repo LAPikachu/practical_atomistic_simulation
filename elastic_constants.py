@@ -12,6 +12,7 @@ from ase.optimize import BFGS
 
 directory = 'data_elastic_constants/'
 
+#this object stores a strain tensor for the 3 different types we investigate
 class StrainTensor:
     def __init__(self):
         self.tensor = np.zeros((3,3))
@@ -33,12 +34,13 @@ class StrainTensor:
         self.tensor[1,1] = eps
 
     def shear(self, eps):
-        self.tensor[0,1] = eps
-        self.tensor[1,0] = eps
+        self.tensor[0,1] = 2*eps
+        self.tensor[1,0] = 2*eps
 
 def deform_cell(cell, strain_tensor):
     cell_array = cell.cell[:]
-    cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor)) # don't use * for multiplying matrices
+    # don't use * for multiplying matrices
+    cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor))
     cell.cell[:] = cell_array_new
     return cell
 
@@ -58,8 +60,9 @@ if __name__ == '__main__':
     deform_types = ['uniax', 'biax', 'shear']
     epsilons = np.linspace(-0.02,0.02, 20) #watch out: no big vals for eps 
 
+    #deform the cell 
     for type in deform_types:
-
+        #this open/close dance is necessary to load and then start work on traj
         traj = Trajectory(f'{directory}{type}.traj', 'w')
         traj.write(cell_relaxed)
         traj = Trajectory(f'{directory}{type}.traj', 'r')
@@ -68,12 +71,13 @@ if __name__ == '__main__':
 
         tensor = StrainTensor()
 
-
         for eps in epsilons:
             tensor.make_tensor(type, eps)
             cell = deform_cell(cell, tensor.tensor)
             cell.calc = EMT()
             cell.get_potential_energy()
             traj.write(cell)
-                
+
+    #fit and find min
     
+
