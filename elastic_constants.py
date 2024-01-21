@@ -37,8 +37,7 @@ class StrainTensor:
         self.tensor[0,1] = 2*eps
         self.tensor[1,0] = 2*eps
 
-def deform_cell(cell, strain_tensor):
-    cell_array = cell.cell[:]
+def deform_cell(cell_array, strain_tensor):
     # don't use * for multiplying matrices
     cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor))
     cell.cell[:] = cell_array_new
@@ -59,25 +58,38 @@ if __name__ == '__main__':
 
     deform_types = ['uniax', 'biax', 'shear']
     epsilons = np.linspace(-0.02,0.02, 20) #watch out: no big vals for eps 
-
+    
     #deform the cell 
     for type in deform_types:
         #this open/close dance is necessary to load and then start work on traj
-        traj = Trajectory(f'{directory}{type}.traj', 'w')
-        traj.write(cell_relaxed)
-        traj = Trajectory(f'{directory}{type}.traj', 'r')
-        cell = traj[-1]
-        traj = Trajectory(f'{directory}{type}.traj', 'w')
-
+        cell_relaxed = read(f'{directory}relaxed_cell.traj@0', 'r')
+        cell_array = cell_relaxed.cell[:]
+        #traj = Trajectory(f'{directory}{type}.traj', 'r')
+        #cell = traj[0]
+        #make first step before writing to file
         tensor = StrainTensor()
-
+        '''
+        cell_array_relaxed = cell_relaxed.cell[:]
+        cell = deform_cell(cell_array_relaxed, tensor.tensor)
+        traj.write(cell)
+        cell_array_init = cell.cell[:] 
+        '''
+        traj = Trajectory(f'{directory}{type}.traj', 'w')
+        
         for eps in epsilons:
             tensor.make_tensor(type, eps)
-            cell = deform_cell(cell, tensor.tensor)
+            cell = deform_cell(cell_array, tensor.tensor)
             cell.calc = EMT()
             cell.get_potential_energy()
             traj.write(cell)
 
+    '''
     #fit and find min
+    for type in deform_types:
+        configs = read(f'{directory}{type}.traj@0:', 'r')
+        energies = [config.get_potential_energy() for config in configs]
+        print(energies)
+    '''
+
     
 
