@@ -39,8 +39,9 @@ class StrainTensor:
 
 def deform_cell(cell_array, strain_tensor):
     # don't use * for multiplying matrices
+    atoms_positions_new = np.dot(atoms_positions,(np.identity(3)+strain_tensor))
     cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor))
-    cell.set_cell(cell_array_new, scale_atoms=True)
+    cell.cell[:] = cell_array_new
     return cell
 
 if __name__ == '__main__':
@@ -49,37 +50,37 @@ if __name__ == '__main__':
         lattice_const_dict = json.load(file) 
     lattice_const = lattice_const_dict['W_3rd_ord']['fcc']
    
-    cell = create_cubic_lattice('fcc', lattice_const)
+    cell = FaceCenteredCubic('Cu', latticeconstant=lattice_const, size=(5,5,5))
     cell.calc = EMT()
     #relax cell  
+    traj_relaxed_cell = Trajectory('{directory}relaxed_cell.traj', 'w')
     relax_cell =  FIRE(cell, trajectory=f'{directory}relaxed_cell.traj')
-    relax_cell.run()
-    traj_relax = Trajectory(f'{directory}relaxed_cell.traj', 'r')
-    cell_relaxed = traj_relax[-1]
+    relax_cell.run(fmax=10*-8)
+    traj_relaxed_cell.write(cell)
+    traj_relax_read = Trajectory(f'{directory}relaxed_cell.traj', 'r')
+    cell_relaxed = traj_relax_read[-1]
 
-    traj_check = Trajectory('check.traj', 'w')
-    traj_check.write(cell_relaxed)
     
     #get initial state of relaxed cell to work with
     cell_array = cell_relaxed.cell[:]
     atoms_positions = cell_relaxed.positions
     volume = cell_relaxed.get_volume()
 
-    deform_types = ['uniax', 'biax', 'shear']
-    epsilons = np.linspace(-0.06,0.06, 20) #watch out: no big vals for eps 
+    epsilons = np.linspace(-0.08,0.06, 20)
+    deform_types = ['uniax', 'biax', 'shear'] # 'biax', 'shear'
     '''
     #deform the cell 
     for type in deform_types:
-        cell_relaxed = read(f'{directory}relaxed_cell.traj@0', 'r')
+        cell = read(f'{directory}relaxed_cell.traj@0', 'r')
         #traj = Trajectory(f'{directory}{type}.traj', 'r')
         #cell = traj[0]
         tensor = StrainTensor()
         traj = Trajectory(f'{directory}{type}.traj', 'w')
-        
+
         for eps in epsilons:
             tensor.make_tensor(type, eps)
             cell = deform_cell(cell_array, tensor.tensor)
-            relax_cell.run()
+            relax_cell.run(fmax=10*-8)
             cell.calc = EMT()
             cell.get_potential_energy()
             traj.write(cell)
@@ -99,7 +100,7 @@ if __name__ == '__main__':
     ax1.set_xlabel('Strain $\epsilon$')
     ax1.set_ylabel('Potential energy eV/Angstrom')
     ax2.set_ylabel('$dEpot/d\epsilon$ eV/Angstrom')
-    ax2.set_ylabel('$d^{2}Epot/d\epsilon^{2}$ V/Angstrom')
+    ax3.set_ylabel('$d^{2}Epot/d\epsilon^{2}$ V/Angstrom')
     ax2.set_xlabel('Strain $\epsilon$')
     ax3.set_xlabel('Strain $\epsilon$')
     elastic_const_dict = {} #the calculated elastic constants go here
@@ -127,8 +128,9 @@ if __name__ == '__main__':
         second_derivative_fit_func_0 = lambda eps: second_derivative_fit_func(eps, *popt[2:])
         ax2.plot(epsilons, [derivative_fit_func_0(x_i) for x_i in epsilons], '-')
         ax3.plot(epsilons, [second_derivative_fit_func_0(x_i) for x_i in epsilons], '-')
-        elastic_const_dict[type] = second_derivative_fit_func_0(min_eps)
-    elastic_const_dict['biax'] =  (elastic_const_dict['biax'] - 2*elastic_const_dict['uniax'])/2
+        elastic_const_dict[type] = second_derivative_fit_func_0(min_eps)*1.6021 #1eV/Angstrom = 1.6021 N/m**2
+    elastic_const_dict['biax'] =  (elastic_const_dict['biax'] - 2*elastic_const_dict['uniax'])/2 #correction for C_12
+    elastic_const_dict['shear'] = elastic_const_dict['shear']/4
     ax1.legend()
     plt.show()
     fig1.savefig(f'{directory}/strain_epot')
@@ -136,6 +138,8 @@ if __name__ == '__main__':
     #now divide these by lattice const**3
     print(min_eps_dict)
     print(elastic_const_dict)
+
+    print('done')
 
 
 
