@@ -11,4 +11,4 @@ to update .yml
 
 the python files are associated with different Tasks in the Problem Statement  
 minimize_energy.py -> Task 3.2
-elastic_constants.py -> TTask 3.5
+elastic_constants.py -> Task 3.5
