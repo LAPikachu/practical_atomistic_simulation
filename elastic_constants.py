@@ -106,7 +106,7 @@ if __name__ == '__main__':
     elastic_const_dict = {} #the calculated elastic constants go here
     min_eps_dict = {} #here we save the root of the first derivative -> the epsilon at which the energy is minimal 
 
-    for type in deform_types:
+    for type,mark in zip(deform_types,['x','o','s']):
         configs = read(f'{directory}{type}.traj@0:', 'r')
         energies = [config.get_potential_energy() for config in configs]
         #[config.get_volume() for config in configs]
@@ -114,7 +114,7 @@ if __name__ == '__main__':
         for energy in energies:
             energy_per_volumes.append(energy/volume)
 
-        ax1.plot(epsilons, energy_per_volumes, 'x', label=f'{type}')
+        ax1.plot(epsilons, energy_per_volumes, mark , label=f'{type}')
 
         popt, pcov = curve_fit(fit_func, epsilons, energy_per_volumes) 
 
@@ -136,6 +136,8 @@ if __name__ == '__main__':
     fig1.savefig(f'{directory}/strain_epot')
     fig2.savefig(f'{directory}/strain_epot_derivatives')
     #now divide these by lattice const**3
+    with open(f'{directory}elastic_constants.json', 'w') as fp:
+        json.dump(elastic_const_dict, fp)
     print(min_eps_dict)
     print(elastic_const_dict)
 
