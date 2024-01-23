@@ -6,7 +6,7 @@ from ase.calculators.emt import EMT
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 from minimize_energy import create_cubic_lattice
-from ase.optimize import BFGS
+from ase.optimize import FIRE
 
 #print(cell.cell[:]) # cell.cell only gives a 1-dim array type output :/ ?
 
@@ -34,13 +34,15 @@ class StrainTensor:
         self.tensor[1,1] = eps
 
     def shear(self, eps):
-        self.tensor[0,1] = 2*eps
-        self.tensor[1,0] = 2*eps
+        self.tensor[0,1] = eps
+        self.tensor[1,0] = eps
 
 def deform_cell(cell_array, strain_tensor):
     # don't use * for multiplying matrices
+    atoms_positions_new = np.dot(atoms_positions,(np.identity(3)+strain_tensor))
     cell_array_new = np.dot(cell_array,(np.identity(3)+strain_tensor))
-    cell.cell[:] = cell_array_new
+    cell.set_cell(cell_array_new)
+    cell.positions = atoms_positions_new
     return cell
 
 if __name__ == '__main__':
@@ -48,48 +50,102 @@ if __name__ == '__main__':
     with open("data_min_energy\lattice_consts", "r") as file: #load lattice constant
         lattice_const_dict = json.load(file) 
     lattice_const = lattice_const_dict['W_3rd_ord']['fcc']
-    cell = create_cubic_lattice('fcc', lattice_const)
+   
+    cell = FaceCenteredCubic('Cu', latticeconstant=lattice_const, size=(5,5,5))
     cell.calc = EMT()
     #relax cell  
-    relax_cell =  BFGS(cell, trajectory=f'{directory}relaxed_cell.traj')
-    relax_cell.run()
-    traj_relax = Trajectory(f'{directory}relaxed_cell.traj', 'r')
-    cell_relaxed = traj_relax[-1]
+    traj_relaxed_cell = Trajectory('{directory}relaxed_cell.traj', 'w')
+    relax_cell =  FIRE(cell, trajectory=f'{directory}relaxed_cell.traj')
+    relax_cell.run(fmax=10*-8)
+    traj_relaxed_cell.write(cell)
+    traj_relax_read = Trajectory(f'{directory}relaxed_cell.traj', 'r')
+    cell_relaxed = traj_relax_read[-1]
 
-    deform_types = ['uniax', 'biax', 'shear']
-    epsilons = np.linspace(-0.02,0.02, 20) #watch out: no big vals for eps 
     
+    #get initial state of relaxed cell to work with
+    cell_array = cell_relaxed.cell[:]
+    atoms_positions = cell_relaxed.positions
+    volume = cell_relaxed.get_volume()
+
+    epsilons = np.linspace(-0.08,0.06, 20)
+    deform_types = ['uniax', 'biax', 'shear'] # 'biax', 'shear'
+    '''
     #deform the cell 
     for type in deform_types:
-        #this open/close dance is necessary to load and then start work on traj
-        cell_relaxed = read(f'{directory}relaxed_cell.traj@0', 'r')
-        cell_array = cell_relaxed.cell[:]
+        cell = read(f'{directory}relaxed_cell.traj@0', 'r')
         #traj = Trajectory(f'{directory}{type}.traj', 'r')
         #cell = traj[0]
-        #make first step before writing to file
         tensor = StrainTensor()
-        '''
-        cell_array_relaxed = cell_relaxed.cell[:]
-        cell = deform_cell(cell_array_relaxed, tensor.tensor)
-        traj.write(cell)
-        cell_array_init = cell.cell[:] 
-        '''
         traj = Trajectory(f'{directory}{type}.traj', 'w')
-        
+
         for eps in epsilons:
             tensor.make_tensor(type, eps)
             cell = deform_cell(cell_array, tensor.tensor)
+            relax_cell.run(fmax=10*-8)
             cell.calc = EMT()
             cell.get_potential_energy()
             traj.write(cell)
-
     '''
+    def fit_func(eps, p_0, p_1, p_2, p_3):
+        return p_0 + p_1*eps + p_2*eps**2 + p_3*eps**3
+    
+    def derivative_fit_func(eps, p_1, p_2, p_3):
+        return p_1 + 2*p_2*eps + 3*p_3*eps**2
+
+    def second_derivative_fit_func(eps,p_2,p_3):
+        return 2*p_2 + 6*p_3*eps
+
     #fit and find min
+    fig1, ax1 = plt.subplots()
+    fig2, (ax2, ax3) = plt.subplots(1,2)
+    ax1.set_xlabel('Strain $\epsilon$')
+    ax1.set_ylabel('Potential energy eV/Angstrom')
+    ax2.set_ylabel('$dEpot/d\epsilon$ eV/Angstrom')
+    ax3.set_ylabel('$d^{2}Epot/d\epsilon^{2}$ V/Angstrom')
+    ax2.set_xlabel('Strain $\epsilon$')
+    ax3.set_xlabel('Strain $\epsilon$')
+    elastic_const_dict = {} #the calculated elastic constants go here
+    min_eps_dict = {} #here we save the root of the first derivative -> the epsilon at which the energy is minimal 
+
     for type in deform_types:
         configs = read(f'{directory}{type}.traj@0:', 'r')
         energies = [config.get_potential_energy() for config in configs]
-        print(energies)
-    '''
+        #[config.get_volume() for config in configs]
+        energy_per_volumes = []
+        for energy in energies:
+            energy_per_volumes.append(energy/volume)
+
+        ax1.plot(epsilons, energy_per_volumes, 'x', label=f'{type}')
+
+        popt, pcov = curve_fit(fit_func, epsilons, energy_per_volumes) 
+
+        ax1.plot(epsilons, [fit_func(x_i, *popt) for x_i in epsilons], '--', label = f'fit {type}')
+
+        derivative_fit_func_0 = lambda eps: derivative_fit_func(eps, *popt[1:]) 
+
+        #find where derivative is 0 -> under what eps energy is minimal
+        min_eps = root_scalar(derivative_fit_func_0, x0=0).root
+        min_eps_dict[type] = min_eps
+        second_derivative_fit_func_0 = lambda eps: second_derivative_fit_func(eps, *popt[2:])
+        ax2.plot(epsilons, [derivative_fit_func_0(x_i) for x_i in epsilons], '-')
+        ax3.plot(epsilons, [second_derivative_fit_func_0(x_i) for x_i in epsilons], '-')
+        elastic_const_dict[type] = second_derivative_fit_func_0(min_eps)*1.6021 #1eV/Angstrom = 1.6021 N/m**2
+    elastic_const_dict['biax'] =  (elastic_const_dict['biax'] - 2*elastic_const_dict['uniax'])/2 #correction for C_12
+    elastic_const_dict['shear'] = elastic_const_dict['shear']/4
+    ax1.legend()
+    plt.show()
+    fig1.savefig(f'{directory}/strain_epot')
+    fig2.savefig(f'{directory}/strain_epot_derivatives')
+    #now divide these by lattice const**3
+    print(min_eps_dict)
+    print(elastic_const_dict)
+
+    print('done')
+
+
+
+
+        
 
     
 
