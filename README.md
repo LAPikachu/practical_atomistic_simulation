@@ -1,6 +1,5 @@
 # practical_atomistic_simulation
 Practical exercises for atomistic simulation utilizing ASE
-Visualization is carried out with ovito
 
 to set up the environment use conda - start with  
 `conda env create --name atomistic --file=environment.yml`  
@@ -9,3 +8,7 @@ to set up the environment use conda - start with
 if work has been done adding new packages, etc. changing the environment use  
 `conda env export > environment.yml`  
 to update .yml
+
+the python files are associated with different Tasks in the Problem Statement  
+minimize_energy.py -> Task 3.2
+elastic_constants.py -> TTask 3.5
