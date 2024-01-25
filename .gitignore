@@ -5,4 +5,6 @@ test_lammps_file
 crystal_structure*
 config_out
 *.traj
+{directory}*
 
+data_CNT_sim/relax_cnt.log
