@@ -19,7 +19,7 @@ L_init_values = {'sc' : 2.56,
 def create_cubic_lattice(lattice_type, L):
     switch_dict = {'sc' : SimpleCubic('Cu', latticeconstant=L, size=(1,1,1)),
                    'bcc' : BodyCenteredCubic('Cu', latticeconstant=L, size=(1,1,1)),
-                   'fcc' : FaceCenteredCubic('Cu', latticeconstant=L, size=(5,5,5))}  
+                   'fcc' : FaceCenteredCubic('Cu', latticeconstant=L, size=(1,1,,1))}  
     return switch_dict[lattice_type]
 
 def calculate_latticeconst_epot_traj(lattice_type, L_init):
@@ -79,14 +79,14 @@ if __name__ =='__main__':
     with open('data_min_energy/epot_latticeconst', 'r') as data:
        data_dict = json.load(data)
     #plot the data
-    fig, ax = plt.subplots()
-    ax.set_xlabel('Lattice constant in Angstrom')
-    ax.set_ylabel('Potential energy in eV')
+    fig1, ax1 = plt.subplots()
+    ax1.set_xlabel('Lattice constant in Angstrom')
+    ax1.set_ylabel('Potential energy in eV')
     # for plotting
     for lattice_type, marker_type in zip(lattice_types, ['1','<','x']):
         x,y = data_dict[lattice_type]
-        ax.plot(x, y, marker_type , label = f'{lattice_type} lattice')
-    ax.legend()
+        ax1.plot(x, y, marker_type , label = f'{lattice_type} lattice')
+    ax1.legend()
     #fit it to a 2nd order polynomial
     #for making the method dynamic we initialize p as a list
     def W_2nd_ord(L, p_0, p_1, p_2):
@@ -113,9 +113,8 @@ if __name__ =='__main__':
     roots_dict, func_name = fit_L_min_epot(W_3rd_ord, dW_3rd_ord, data_dict)
     roots_fit_dict[func_name] = roots_dict
 
-    save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
+    fig1.save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
     print("Lattice constants: \n"
         "Sc {L_sc} \nbcc {L_bcc}"
         "\nfcc {L_fcc} ".format(L_sc=roots_dict['sc'],
                                 L_bcc=roots_dict['bcc'], L_fcc=roots_dict['fcc']))
-    #ToDo: Implment 3rd oder fit
