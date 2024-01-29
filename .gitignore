@@ -6,5 +6,5 @@ crystal_structure*
 config_out
 *.traj
 {directory}*
-
-data_CNT_sim/relax_cnt.log
+data_CNT_sim/*
+data_CNT_sim/nve_deform/*
