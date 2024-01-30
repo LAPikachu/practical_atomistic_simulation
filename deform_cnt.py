@@ -8,15 +8,19 @@ from ase.build import nanotube
 from ase.io import Trajectory, read, write, lammpsdata
 from ase.optimize import FIRE
 from ase.md.verlet import VelocityVerlet
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
 from ase import units
 import os
 from pathlib import Path
 #from tqdm import tqdm
 
+plot_dir = 'data_CNT_sim/nve_plots'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nve_deform/'
-cnt = nanotube(5, 5, symbol='C', length=1, bond=1.42)
+cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
+cnt.cell[:] = cnt.cell[:] + np.array([[3, 0, 0],[0, 3, 0],[0, 0, 0]])
+
+cnt.set_pbc([0,0,1])
 cnt.calc = EMT()
 
 start_traj = Trajectory(f'{directory}cnt_initial.traj', 'w')
@@ -34,23 +38,37 @@ def printenergy(atoms=cnt):
      epot = atoms.get_potential_energy()
      ekin = atoms.get_kinetic_energy()     
      temp = atoms.get_temperature()
-     print(f'epot: {epot}, ekin: {ekin}, temperaure: {temp}')
+     print(f'epot: {epot}, ekin: {ekin}, temperature: {temp}')
 
-def run_simulation(loop_number, step_number, timestep, eps):
-    dyn.attach(printenergy)
-    dyn.run(100) #eqiliberate befor running
+def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
+    #dyn.attach(printenergy)
+    MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
+    Stationary(cnt)
+    #eqiliberate befor running
     for i in range(loop_number):
             loop_time = i*step_number
+            for step in range(start_deform):
+                 dyn.run(1)
+                 if (loop_time+step)%1 == 0:
+                     data['time'].append((loop_time+step)*timestep)
+                     data['temperature'].append(cnt.get_temperature())
+                     data['epot'].append(cnt.get_potential_energy())
+                     data['ekin'].append(cnt.get_kinetic_energy())
+                     data['etot'].append(cnt.get_total_energy())
             deform_in_z(cnt, eps)
             #dyn.attach(printenergy)
-            for step in range(step_number): 
+            for step in range(start_deform, step_number): 
+                #MaxwellBoltzmannDistribution(cnt, temp_K=0)
+                Stationary(cnt)
                 dyn.run(1)
                 if (loop_time+step)%1 == 0:
                     data['time'].append((loop_time+step)*timestep)
-                    data['temperatur'].append(cnt.get_temperature())
+                    data['temperature'].append(cnt.get_temperature())
                     data['epot'].append(cnt.get_potential_energy())
                     data['ekin'].append(cnt.get_kinetic_energy())
                     data['etot'].append(cnt.get_total_energy())
+                    if i%1 == 0:
+                        lammpsdata.write_lammps_data(f'{data_directory}cnt_{i}.dump', cnt) # dump to lammps dump so ovito can show it
                 
             print(f'Rep {i+1} of {loop_number}')
             if i%10 == 0:
@@ -66,32 +84,35 @@ if __name__ == '__main__':
              print('no files in data dir')
 
     
-    strain_rate = 10**8 #in s^-1 
-    #strain_rate = eps/(timestep * step_number*10**-12)
+    strain_rate = 1*10**13 #s^-1 
+    #strain_rate = eps/(timestep * step_number*10**-15)
+    start_deform = 0
     timestep = 0.1 #in fs
-    step_number = 100
-    loop_number = 100
-    eps = strain_rate * timestep * step_number*10**-12
+    step_number = 10
+    loop_number = 50
+    eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
-    total_strain = eps*loop_number 
+    total_strain = eps*loop_number
     dyn = VelocityVerlet(cnt, timestep=timestep*units.fs)
-    data = {'time':[],'temperatur':[], 'epot':[],'ekin':[], 'etot': []}
+    data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
     cnt_array_original = cnt.cell[:]
-    MaxwellBoltzmannDistribution(cnt, temperature_K=0)
-    run_simulation(loop_number, step_number, timestep, eps) 
+    run_simulation(loop_number, step_number, timestep, eps, start_deform) 
     with open(f'{data_directory}data.json', 'r') as fp:
         data = json.load(fp)
     
     fig, ax = plt.subplots()
     ax.set_title('strain rate {a:e} $s^-1$, total strain {b:4f} '.format(a=strain_rate, b=total_strain))
     ax.set_xlabel('time in fs')
-    ax.set_ylabel('Epot, Ekin, Etot in eV, T in K')
-    #ax.plot(data['time'], data['temperatur'],'s', label = 'temperatur')
-    ax.plot(data['time'], data['ekin'],'.', label = 'ekin')
-    ax.plot(data['time'], data['epot'],'.', label = 'epot')
-    ax.plot(data['time'], data['etot'], '.', label = 'etot')
+    ax.set_ylabel('Epot, Ekin, Etot in eV')
+    #ax.plot(data['time'], data['temperature'],marker='.', markersize=0.1,  label = 'temperature')
+    ax.plot(data['time'], data['ekin'],marker='.', markersize=0.1, label = 'ekin')
+    ax.plot(data['time'], data['epot'],marker='.', markersize=0.1, label = 'epot')
+    ax.plot(data['time'], data['etot'], marker='.', markersize=0.1, label = 'etot')
     ax.legend()
     plt.show()
+    fig.savefig('{plot_dir}long_sr{sr:2.2e}_etot{etot:2.2e}_steps{steps}_loops{loops}.png'.format(plot_dir=plot_dir, sr=strain_rate,
+                                                                                    etot=total_strain, steps=step_number,
+                                                                                    loops=loop_number))
     print('done')
 
 
