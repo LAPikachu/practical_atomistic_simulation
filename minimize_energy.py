@@ -19,7 +19,7 @@ L_init_values = {'sc' : 2.56,
 def create_cubic_lattice(lattice_type, L):
     switch_dict = {'sc' : SimpleCubic('Cu', latticeconstant=L, size=(1,1,1)),
                    'bcc' : BodyCenteredCubic('Cu', latticeconstant=L, size=(1,1,1)),
-                   'fcc' : FaceCenteredCubic('Cu', latticeconstant=L, size=(1,1,,1))}  
+                   'fcc' : FaceCenteredCubic('Cu', latticeconstant=L, size=(1,1,1))}  
     return switch_dict[lattice_type]
 
 def calculate_latticeconst_epot_traj(lattice_type, L_init):
