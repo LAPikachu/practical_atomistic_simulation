@@ -5,7 +5,7 @@ import json
 from scipy.optimize import curve_fit, root_scalar
 from ase.calculators.emt import EMT
 from ase.build import nanotube
-from ase.io import Trajectory, read, write, lammpsdata
+from ase.io import Trajectory, read, write, gromacs
 from ase.optimize import FIRE
 from ase.md.verlet import VelocityVerlet
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 #from tqdm import tqdm
 
-plot_dir = 'data_CNT_sim/nve_plots'
+plot_dir = 'data_CNT_sim/nve_plots/'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nve_deform/'
 cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
@@ -25,7 +25,7 @@ cnt.calc = EMT()
 
 start_traj = Trajectory(f'{directory}cnt_initial.traj', 'w')
 start_traj.write(cnt)
-lammpsdata.write_lammps_data(f'{directory}cnt_initial.dump', cnt) # dump to lammps dump so ovito can show it
+gromacs.write_gromacs(f'{directory}cnt_initial.gro', cnt) #.gro to lammps.gro so ovito can show it
 
 observing_traj = Trajectory(f'{directory}cnt.traj', 'w')
 
@@ -41,25 +41,15 @@ def printenergy(atoms=cnt):
      print(f'epot: {epot}, ekin: {ekin}, temperature: {temp}')
 
 def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
-    #dyn.attach(printenergy)
+    dyn.attach(printenergy)
     MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
     Stationary(cnt)
+    dyn.run(500)
     #eqiliberate befor running
     for i in range(loop_number):
-            loop_time = i*step_number
-            for step in range(start_deform):
-                 dyn.run(1)
-                 if (loop_time+step)%1 == 0:
-                     data['time'].append((loop_time+step)*timestep)
-                     data['temperature'].append(cnt.get_temperature())
-                     data['epot'].append(cnt.get_potential_energy())
-                     data['ekin'].append(cnt.get_kinetic_energy())
-                     data['etot'].append(cnt.get_total_energy())
-            deform_in_z(cnt, eps)
-            #dyn.attach(printenergy)
-            for step in range(start_deform, step_number): 
-                #MaxwellBoltzmannDistribution(cnt, temp_K=0)
-                Stationary(cnt)
+    
+        loop_time = i*step_number
+        for step in range(start_deform):
                 dyn.run(1)
                 if (loop_time+step)%1 == 0:
                     data['time'].append((loop_time+step)*timestep)
@@ -67,29 +57,41 @@ def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
                     data['epot'].append(cnt.get_potential_energy())
                     data['ekin'].append(cnt.get_kinetic_energy())
                     data['etot'].append(cnt.get_total_energy())
-                    if i%1 == 0:
-                        lammpsdata.write_lammps_data(f'{data_directory}cnt_{i}.dump', cnt) # dump to lammps dump so ovito can show it
-                
-            print(f'Rep {i+1} of {loop_number}')
-            if i%10 == 0:
-                lammpsdata.write_lammps_data(f'{data_directory}cnt_{i}.dump', cnt) # dump to lammps dump so ovito can show it
-    with open(f'{data_directory}data.json', 'w') as fp:
-        json.dump(data, fp)
+        deform_in_z(cnt, eps)
+        #dyn.attach(printenergy)
+        for step in range(start_deform, step_number): 
+            #MaxwellBoltzmannDistribution(cnt, temp_K=0)
+            Stationary(cnt)
+            dyn.run(1)
+            if (loop_time+step)%1 == 0:
+                data['time'].append((loop_time+step)*timestep)
+                data['temperature'].append(cnt.get_temperature())
+                data['epot'].append(cnt.get_potential_energy())
+                data['ekin'].append(cnt.get_kinetic_energy())
+                data['etot'].append(cnt.get_total_energy())
+                if i%1 == 0:
+                    gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps.gro so ovito can show it
+            
+        print(f'Rep {i+1} of {loop_number}')
+        if i%10 == 0:
+            gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps.gro so ovito can show it
+        with open(f'{data_directory}data.json', 'w') as fp:
+            json.dump(data, fp)
 
 if __name__ == '__main__':
-    for f in Path(f'{data_directory}').glob('*.dump'): #clean up output path for dump files
+    for f in Path(f'{data_directory}').glob('*.dump' and '*.gro'): #clean up output path for dump files
         try:
               f.unlink()
         except:
              print('no files in data dir')
 
     
-    strain_rate = 1*10**13 #s^-1 
+    strain_rate = 3*10**12 #s^-1 
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
     step_number = 10
-    loop_number = 50
+    loop_number = 150
     eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
     total_strain = eps*loop_number

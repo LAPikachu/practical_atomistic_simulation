@@ -14,12 +14,12 @@
 - [x] 3.2 calculate min enegies
 - [x] 3.3 write eq. for missing elast constats
 - [x] 3.4 eq. for strain distributions
-- [ ] 3.5 evaluate elastic constants
-- [ ] 3.6 look at strain energy density, give range where assumption reasonable
+- [x] 3.5 evaluate elastic constants
+- [x] 3.6 look at strain energy density, give range where assumption reasonable
 
 ### Task 4
-- [ ] 4.1 LitRes: what kind of CNT exist, choose 5,5 armchair nanotube
-- [ ] 4.2 estimate crit deformatioin rate (NVE)
-- [ ] 4.3 calc energy increase by deformation 
+- [x] 4.1 LitRes: what kind of CNT exist, choose 5,5 armchair nanotube
+- [x] 4.2 estimate crit deformatioin rate (NVE)
+- [x] 4.3 calc energy increase by deformation 
 - [ ] 4.4 NVT uniaxial deformation  
 - [ ] 4.5 Calc bond break enegies w/ brenner-potential
