@@ -18,10 +18,10 @@ plot_dir = 'data_CNT_sim/nve_plots/'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nve_deform/'
 cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
-cnt.cell[:] = cnt.cell[:] + np.array([[3, 0, 0],[0, 3, 0],[0, 0, 0]])
-
-cnt.set_pbc([0,0,1])
 cnt.calc = EMT()
+#adjust cell and pbc (for visualization)
+cnt.cell[:] = cnt.cell[:] + np.array([[10, 0, 0],[0, 10, 0],[0, 0, 0]])
+cnt.set_pbc([0,0,1])
 
 start_traj = Trajectory(f'{directory}cnt_initial.traj', 'w')
 start_traj.write(cnt)
@@ -44,12 +44,12 @@ def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
     dyn.attach(printenergy)
     MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
     Stationary(cnt)
-    dyn.run(500)
+    dyn.run(500) #run before simulation (w/o recording data)
     #eqiliberate befor running
     for i in range(loop_number):
     
         loop_time = i*step_number
-        for step in range(start_deform):
+        for step in range(start_deform): #for if we want to safe data before deforming
                 dyn.run(1)
                 if (loop_time+step)%1 == 0:
                     data['time'].append((loop_time+step)*timestep)
@@ -61,7 +61,7 @@ def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
         #dyn.attach(printenergy)
         for step in range(start_deform, step_number): 
             #MaxwellBoltzmannDistribution(cnt, temp_K=0)
-            Stationary(cnt)
+            #Stationary(cnt)
             dyn.run(1)
             if (loop_time+step)%1 == 0:
                 data['time'].append((loop_time+step)*timestep)
@@ -86,19 +86,19 @@ if __name__ == '__main__':
              print('no files in data dir')
 
     
-    strain_rate = 3*10**12 #s^-1 
+    strain_rate = 1*10**14 #s^-1 
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
-    step_number = 10
-    loop_number = 150
+    step_number = 60
+    loop_number = 1
     eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
     total_strain = eps*loop_number
     dyn = VelocityVerlet(cnt, timestep=timestep*units.fs)
     data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
     cnt_array_original = cnt.cell[:]
-    run_simulation(loop_number, step_number, timestep, eps, start_deform) 
+    #run_simulation(loop_number, step_number, timestep, eps, start_deform) 
     with open(f'{data_directory}data.json', 'r') as fp:
         data = json.load(fp)
     
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     ax.set_title('strain rate {a:e} $s^-1$, total strain {b:4f} '.format(a=strain_rate, b=total_strain))
     ax.set_xlabel('time in fs')
     ax.set_ylabel('Epot, Ekin, Etot in eV')
-    #ax.plot(data['time'], data['temperature'],marker='.', markersize=0.1,  label = 'temperature')
+    ax.plot(data['time'], data['temperature'],marker='.', markersize=0.1,  label = 'temperature')
     ax.plot(data['time'], data['ekin'],marker='.', markersize=0.1, label = 'ekin')
     ax.plot(data['time'], data['epot'],marker='.', markersize=0.1, label = 'epot')
     ax.plot(data['time'], data['etot'], marker='.', markersize=0.1, label = 'etot')

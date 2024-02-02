@@ -18,10 +18,10 @@ plot_dir = 'data_CNT_sim/nvt_plots/'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nvt_deform/'
 cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
-cnt.cell[:] = cnt.cell[:] + np.array([[10, 0, 0],[0, 10, 0],[0, 0, 0]])
-
-cnt.set_pbc([0,0,1])
 cnt.calc = EMT()
+#adjust cell and pbc (for visualization)
+cnt.cell[:] = cnt.cell[:] + np.array([[10, 0, 0],[0, 10, 0],[0, 0, 0]])
+cnt.set_pbc([0,0,1])
 
 start_traj = Trajectory(f'{directory}cnt_initial.traj', 'w')
 start_traj.write(cnt)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
-    step_number = 20
+    step_number = 30
     loop_number = 100
     eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
