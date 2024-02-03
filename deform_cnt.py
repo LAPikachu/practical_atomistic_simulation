@@ -40,7 +40,7 @@ def printenergy(atoms=cnt):
      temp = atoms.get_temperature()
      print(f'epot: {epot}, ekin: {ekin}, temperature: {temp}')
 
-def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
+def run_simulation(loop_number, step_number, timestep, eps,filename, start_deform=0):
     dyn.attach(printenergy)
     MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
     Stationary(cnt)
@@ -75,8 +75,8 @@ def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
         print(f'Rep {i+1} of {loop_number}')
         if i%10 == 0:
             gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps.gro so ovito can show it
-        with open(f'{data_directory}data.json', 'w') as fp:
-            json.dump(data, fp)
+    with open(f'{data_directory}{filename}_data.json', 'w') as fp:
+        json.dump(data, fp)
 
 if __name__ == '__main__':
     for f in Path(f'{data_directory}').glob('*.dump' and '*.gro'): #clean up output path for dump files
@@ -85,20 +85,24 @@ if __name__ == '__main__':
         except:
              print('no files in data dir')
 
-    
-    strain_rate = 1*10**14 #s^-1 
+    #adjustable variables 
+    strain_rate = 5*10**11 #s^-1 
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
-    step_number = 60
-    loop_number = 1
+    step_number = 20
+    loop_number = 200
+    #implicite variables
     eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
     total_strain = eps*loop_number
+    filename = 'sr{sr:2.2e}_etot{etot:2.2e}_steps{steps}_loops{loops}'.format(sr=strain_rate, etot=total_strain,
+                                                                                  steps=step_number, loops=loop_number)
+   
     dyn = VelocityVerlet(cnt, timestep=timestep*units.fs)
     data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
     cnt_array_original = cnt.cell[:]
-    #run_simulation(loop_number, step_number, timestep, eps, start_deform) 
+    run_simulation(loop_number, step_number, timestep, eps, filename, start_deform) 
     with open(f'{data_directory}data.json', 'r') as fp:
         data = json.load(fp)
     
@@ -106,15 +110,13 @@ if __name__ == '__main__':
     ax.set_title('strain rate {a:e} $s^-1$, total strain {b:4f} '.format(a=strain_rate, b=total_strain))
     ax.set_xlabel('time in fs')
     ax.set_ylabel('Epot, Ekin, Etot in eV')
-    ax.plot(data['time'], data['temperature'],marker='.', markersize=0.1,  label = 'temperature')
+    #ax.plot(data['time'], data['temperature'],marker='.', markersize=0.1,  label = 'temperature')
     ax.plot(data['time'], data['ekin'],marker='.', markersize=0.1, label = 'ekin')
     ax.plot(data['time'], data['epot'],marker='.', markersize=0.1, label = 'epot')
     ax.plot(data['time'], data['etot'], marker='.', markersize=0.1, label = 'etot')
     ax.legend()
     plt.show()
-    fig.savefig('{plot_dir}long_sr{sr:2.2e}_etot{etot:2.2e}_steps{steps}_loops{loops}.png'.format(plot_dir=plot_dir, sr=strain_rate,
-                                                                                    etot=total_strain, steps=step_number,
-                                                                                    loops=loop_number))
+    fig.savefig('{plot_dir}long_{filename}.png'.format(plot_dir=plot_dir, filename=filename))
     print('done')
 
 
