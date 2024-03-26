@@ -109,7 +109,7 @@ if __name__ == '__main__':
     ax.plot(data['time'], data['etot'], marker='.', markersize=0.1, label = 'etot')
     ax.legend()
     plt.show()
-    fig.savefig('{plot_dir}long_sr{sr:2.2e}_etot{etot:2.2e}'
+    fig.savefig('{plot_dir}long_nvt_sr{sr:2.2e}_etot{etot:2.2e}'
                 '_steps{steps}_loops{loops}.png'.format(plot_dir=plot_dir,sr=strain_rate,
                                                         etot=total_strain, steps=step_number,
                                                         loops=loop_number))

@@ -103,7 +103,7 @@ if __name__ == '__main__':
     data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
     cnt_array_original = cnt.cell[:]
     run_simulation(loop_number, step_number, timestep, eps, filename, start_deform) 
-    with open(f'{data_directory}data.json', 'r') as fp:
+    with open(f'{data_directory}{filename}_data.json', 'r') as fp:
         data = json.load(fp)
     
     fig, ax = plt.subplots()
