@@ -25,7 +25,7 @@ def create_cubic_lattice(lattice_type, L):
 def calculate_latticeconst_epot_traj(lattice_type, L_init):
     traj_file = Trajectory(f'data_min_energy/{lattice_type}.traj', 'w')
     lattice_constants_list = []
-    for L in np.linspace(L_init - 0.5 , L_init + 1, 100):
+    for L in np.linspace(L_init - 0.2 , L_init + 0.2, 100):
         lattice_constants_list.append(L) # append current lattice constant
         data = create_cubic_lattice(lattice_type, L)
         data.set_calculator(EMT())
@@ -53,11 +53,11 @@ def fit_L_min_epot(func, dfunc, data_dict):
     for lattice_type in lattice_types:
         x,y = data_dict[lattice_type]#[:60][:60] could adjust over which values to fit
         popt, pcov = curve_fit(func, x, y)
-        ax.plot(x, [func(x_i, *popt) for x_i in x],
+        ax1.plot(x, [func(x_i, *popt) for x_i in x],
                 '--', label = f'{func_name} {lattice_type} lattice')
         fitting_params[lattice_type] = popt
-    ax.legend()
-    fig.savefig(f'data_min_energy/{func_name}_epot_lattice_plot')
+    ax1.legend()
+    fig1.savefig(f'data_min_energy/{func_name}_epot_lattice_plot')
     roots_dict = {}
     for lattice_type in  lattice_types:
         p_array = fitting_params[lattice_type][1:] # not from 0 since p_0 sits at 0
@@ -104,16 +104,17 @@ if __name__ =='__main__':
     2nd ord poly not ideal for theses kinds of curvature?
     '''
     
+    '''
     def W_3rd_ord(L, p_0, p_1, p_2, p_3):
         return p_0 + p_1 * L + p_2 * L ** 2 + p_3 * L ** 3
-    
     def dW_3rd_ord(L, p_array):
         return p_array[0] + 2 * p_array[1] * L + 3 * p_array[2] * L**2
     
     roots_dict, func_name = fit_L_min_epot(W_3rd_ord, dW_3rd_ord, data_dict)
+    '''
     roots_fit_dict[func_name] = roots_dict
 
-    fig1.save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
+    save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
     print("Lattice constants: \n"
         "Sc {L_sc} \nbcc {L_bcc}"
         "\nfcc {L_fcc} ".format(L_sc=roots_dict['sc'],
