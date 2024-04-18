@@ -9,6 +9,10 @@ from ase.optimize import FIRE
 
 #print(cell.cell[:]) # cell.cell only gives a 1-dim array type output :/ ?
 
+strain_high = 0.1
+
+strain_low = -0.1
+
 directory = 'data_elastic_constants/'
 
 #this object stores a strain tensor for the 3 different types we investigate
@@ -57,7 +61,7 @@ if __name__ == '__main__':
     #relax initial structur
     with open("data_min_energy\lattice_consts", "r") as file: #load lattice constant
         lattice_const_dict = json.load(file) 
-    lattice_const = lattice_const_dict['W_3rd_ord']['fcc']
+    lattice_const = lattice_const_dict['W_2nd_ord']['fcc']
    
     cell = FaceCenteredCubic('Cu', latticeconstant=lattice_const, size=(3,3,3))
     cell.calc = EMT()
@@ -75,7 +79,7 @@ if __name__ == '__main__':
     atoms_positions = cell_relaxed.positions
     volume = cell_relaxed.get_volume()
 
-    epsilons = np.linspace(-0.3,0.3, 40)
+    epsilons = np.linspace(strain_low, strain_high, 60)
     deform_types = ['uniax', 'biax', 'shear']
     #deform the cell 
     for type in deform_types:
@@ -96,9 +100,9 @@ if __name__ == '__main__':
     fig1, ax1 = plt.subplots()
     fig2, (ax2, ax3) = plt.subplots(1,2)
     ax1.set_xlabel('Strain $\epsilon$')
-    ax1.set_ylabel('Potential energy eV/Angstrom')
-    ax2.set_ylabel('$dW/d\epsilon$ eV/Angstrom')
-    ax3.set_ylabel('$d^{2}W/d\epsilon^{2}$ eV/Angstrom')
+    ax1.set_ylabel('Strain Energy density eV/$Angstrom^{3}$')
+    ax2.set_ylabel('$dW/d\epsilon$ eV/$Angstrom^{3}')
+    ax3.set_ylabel('$d^{2}W/d\epsilon^{2}$ eV')
     ax2.set_xlabel('Strain $\epsilon$')
     ax3.set_xlabel('Strain $\epsilon$')
     elastic_const_dict = {} #the calculated elastic constants go here
@@ -132,8 +136,8 @@ if __name__ == '__main__':
     elastic_const_dict['shear'] = elastic_const_dict['shear']/4
     ax1.legend()
     plt.show()
-    fig1.savefig(f'{directory}/strain_epot')
-    fig2.savefig(f'{directory}/strain_epot_derivatives')
+    fig1.savefig(f'{directory}/strain_epot_elow{strain_low}_ehigh{strain_high}')
+    fig2.savefig(f'{directory}/strain_epot_derivatives_elow{strain_low}_ehigh{strain_high}')
     #now divide these by lattice const**3
     with open(f'{directory}elastic_constants.json', 'w') as fp:
         json.dump(elastic_const_dict, fp)
