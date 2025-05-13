@@ -2,7 +2,7 @@
 Practical exercises for atomistic simulation utilizing ASE
 make sure to be in the folder of your project    
 for setting up the environment use:    
-`python3 -m venv create env'         
+`python3 -m venv create env`             
 then to enter the environment:    
 `source env/bin/activate`    
 after this install packages (as listed in the requirements.txt file)    
