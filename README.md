@@ -1,8 +1,12 @@
 # practical_atomistic_simulation
 Practical exercises for atomistic simulation utilizing ASE
-
+make sure to be in the folder of your project    
 for setting up the environment use:    
-`pip install -r requirementts.txt´    
+`python3 -m venv create env'         
+then to enter the environment:    
+`source env/bin/activate`    
+after this install packages (as listed in the requirements.txt file)    
+`pip install -r requirements.txt´        
 
 if conda is used:
 to set up the environment use conda - start with  
