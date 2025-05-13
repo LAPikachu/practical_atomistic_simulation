@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import json
 from scipy.optimize import curve_fit, root_scalar
-from ase.calculators.emt import EMT
+#from ase.calculators.emt import EMT
+from asap3 import EMT
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 
