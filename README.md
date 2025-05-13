@@ -1,6 +1,10 @@
 # practical_atomistic_simulation
 Practical exercises for atomistic simulation utilizing ASE
 
+for setting up the environment use:    
+`pip install -r requirementts.txt´    
+
+if conda is used:
 to set up the environment use conda - start with  
 `conda env create --name atomistic --file=environment.yml`  
 `conda activate atomistic`
