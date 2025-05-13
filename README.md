@@ -6,7 +6,7 @@ for setting up the environment use:
 then to enter the environment:    
 `source env/bin/activate`    
 after this install packages (as listed in the requirements.txt file)    
-`pip install -r requirements.txt        
+`pip install -r requirements.txt`        
 
 if conda is used:
 to set up the environment use conda - start with  
