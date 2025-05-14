@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import json
 from scipy.optimize import curve_fit, root_scalar
 #from ase.calculators.emt import EMT
-from asap3 import EMT
+from asap3 import EMT, EMTRasmussenParameters, EMT2013
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 from ase.optimize import FIRE
@@ -66,6 +66,7 @@ if __name__ == '__main__':
    
     cell = FaceCenteredCubic('Cu', latticeconstant=lattice_const, size=(3,3,3))
     cell.calc = EMT()
+    # cell.calc = EMT(EMTRasmussenParameters()) in case other parameters need to be used
     #relax cell  
     traj_relaxed_cell = Trajectory(f'{directory}relaxed_cell.log', 'w')
     relax_cell =  FIRE(cell, trajectory=f'{directory}relaxed_cell.traj')
@@ -83,15 +84,15 @@ if __name__ == '__main__':
     epsilons = np.linspace(strain_low, strain_high, 60)
     deform_types = ['uniax', 'biax', 'shear']
     #deform the cell 
-    for type in deform_types:
+    for d_type in deform_types:
         cell = read(f'{directory}relaxed_cell.traj@0', 'r')
-        #traj = Trajectory(f'{directory}{type}.traj', 'r')
+        #traj = Trajectory(f'{directory}{d_type}.traj', 'r')
         #cell = traj[0]
         tensor = StrainTensor()
-        traj = Trajectory(f'{directory}{type}.traj', 'w')
+        traj = Trajectory(f'{directory}{d_type}.traj', 'w')
 
         for eps in epsilons:
-            tensor.make_tensor(type, eps)
+            tensor.make_tensor(d_type, eps)
             cell = deform_cell(cell_array, tensor.tensor)
             relax_cell.run(fmax=10**-8)
             cell.calc = EMT()
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     fig2, (ax2, ax3) = plt.subplots(1,2)
     ax1.set_xlabel('Strain $\epsilon$')
     ax1.set_ylabel('Strain Energy density eV/$Angstrom^{3}$')
-    ax2.set_ylabel('$dW/d\epsilon$ eV/$Angstrom^{3}')
+    ax2.set_ylabel('$dW/d\epsilon$ eV/$Angstrom^{3}$')
     ax3.set_ylabel('$d^{2}W/d\epsilon^{2}$ eV')
     ax2.set_xlabel('Strain $\epsilon$')
     ax3.set_xlabel('Strain $\epsilon$')
@@ -110,29 +111,29 @@ if __name__ == '__main__':
     min_eps_dict = {} #here we save the root of the first derivative -> the epsilon at which the energy is minimal 
     
     #fit and find min
-    for type,mark in zip(deform_types,['x','s','o']):
-        configs = read(f'{directory}{type}.traj@0:', 'r')
+    for d_type,mark in zip(deform_types,['x','s','o']):
+        configs = read(f'{directory}{d_type}.traj@0:', 'r')
         energies = [config.get_potential_energy() for config in configs]
         #[config.get_volume() for config in configs]
         energy_per_volumes = []
         for energy in energies:
             energy_per_volumes.append(energy/volume)
 
-        ax1.plot(epsilons, energy_per_volumes, mark , label=f'{type}')
+        ax1.plot(epsilons, energy_per_volumes, mark , label=f'{d_type}')
 
         popt, pcov = curve_fit(fit_func, epsilons, energy_per_volumes) 
 
-        ax1.plot(epsilons, [fit_func(x_i, *popt) for x_i in epsilons], '--', label = f'fit {type}')
+        ax1.plot(epsilons, [fit_func(x_i, *popt) for x_i in epsilons], '--', label = f'fit {d_type}')
 
         derivative_fit_func_0 = lambda eps: derivative_fit_func(eps, *popt[1:]) 
 
         #find where derivative is 0 -> under what eps energy is minimal
         min_eps = root_scalar(derivative_fit_func_0, x0=0).root
-        min_eps_dict[type] = min_eps
+        min_eps_dict[d_type] = min_eps
         second_derivative_fit_func_0 = lambda eps: second_derivative_fit_func(eps, *popt[2:])
         ax2.plot(epsilons, [derivative_fit_func_0(x_i) for x_i in epsilons], '-')
         ax3.plot(epsilons, [second_derivative_fit_func_0(x_i) for x_i in epsilons], '-')
-        elastic_const_dict[type] = second_derivative_fit_func_0(min_eps)*1.6021 #1eV/Angstrom = 1.6021 N/m**2
+        elastic_const_dict[d_type] = second_derivative_fit_func_0(min_eps)*1.6021 #1eV/Angstrom = 1.6021 N/m**2
     elastic_const_dict['biax'] =  (elastic_const_dict['biax'] - 2*elastic_const_dict['uniax'])/2 #correction for C_12
     elastic_const_dict['shear'] = elastic_const_dict['shear']/4
     ax1.legend()
