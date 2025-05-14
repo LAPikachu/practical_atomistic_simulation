@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 from scipy.optimize import curve_fit, root_scalar
-from ase.calculators.emt import EMT
+#from ase.calculators.emt import EMT
+from asap3 import EMT
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 from ase.optimize import FIRE
@@ -59,7 +60,7 @@ def second_derivative_fit_func(eps,p_2,p_3):
 
 if __name__ == '__main__':
     #relax initial structur
-    with open("data_min_energy\lattice_consts", "r") as file: #load lattice constant
+    with open("data_min_energy/lattice_consts", "r") as file: #load lattice constant
         lattice_const_dict = json.load(file) 
     lattice_const = lattice_const_dict['W_2nd_ord']['fcc']
    
@@ -136,8 +137,8 @@ if __name__ == '__main__':
     elastic_const_dict['shear'] = elastic_const_dict['shear']/4
     ax1.legend()
     plt.show()
-    fig1.savefig(f'{directory}/strain_epot_elow{strain_low}_ehigh{strain_high}')
-    fig2.savefig(f'{directory}/strain_epot_derivatives_elow{strain_low}_ehigh{strain_high}')
+    fig1.savefig(f'{directory}/strain_epot_elow{strain_low}_ehigh{strain_high}.png')
+    fig2.savefig(f'{directory}/strain_epot_derivatives_elow{strain_low}_ehigh{strain_high}.png')
     #now divide these by lattice const**3
     with open(f'{directory}elastic_constants.json', 'w') as fp:
         json.dump(elastic_const_dict, fp)
