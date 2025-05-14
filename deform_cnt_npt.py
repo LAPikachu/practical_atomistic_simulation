@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import json
 from scipy.optimize import curve_fit, root_scalar
 from ase.calculators.emt import EMT
+from asap3 import BrennerPotential
 from ase.build import nanotube
 from ase.io import Trajectory, read, write, gromacs
 from ase.optimize import FIRE
@@ -18,7 +19,7 @@ plot_dir = 'data_CNT_sim/nvt_plots/'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nvt_deform/'
 cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
-cnt.calc = EMT()
+cnt.calc = BrennerPotential()
 #adjust cell and pbc (for visualization)
 cnt.cell[:] = cnt.cell[:] + np.array([[10, 0, 0],[0, 10, 0],[0, 0, 0]])
 cnt.set_pbc([0,0,1])

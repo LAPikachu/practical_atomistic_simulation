@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import json
 from scipy.optimize import curve_fit, root_scalar
 from ase.calculators.emt import EMT
+from asap3 import BrennerPotential
 from ase.build import nanotube
-from ase.io import Trajectory, read, write, gromacs
+from ase.io import Trajectory, read, write, gromacs, extxyz
 from ase.optimize import FIRE
 from ase.md.verlet import VelocityVerlet
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
@@ -18,7 +19,7 @@ plot_dir = 'data_CNT_sim/nve_plots/'
 directory = 'data_CNT_sim/'
 data_directory = 'data_CNT_sim/nve_deform/'
 cnt = nanotube(5, 5, symbol='C', length=3, bond=1.42)
-cnt.calc = EMT()
+cnt.calc = BrennerPotential()
 #adjust cell and pbc (for visualization)
 cnt.cell[:] = cnt.cell[:] + np.array([[10, 0, 0],[0, 10, 0],[0, 0, 0]])
 cnt.set_pbc([0,0,1])
@@ -79,14 +80,14 @@ def run_simulation(loop_number, step_number, timestep, eps,filename, start_defor
         json.dump(data, fp)
 
 if __name__ == '__main__':
-    for f in Path(f'{data_directory}').glob('*.dump' and '*.gro'): #clean up output path for dump files
+    for f in Path(f'{data_directory}').glob('*.dump' and '*.gro' and '*.xyz'): #clean up output path for dump files
         try:
               f.unlink()
         except:
              print('no files in data dir')
 
     #adjustable variables 
-    strain_rate = 5*10**11 #s^-1 
+    strain_rate = 5*10**12 #s^-1 
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
