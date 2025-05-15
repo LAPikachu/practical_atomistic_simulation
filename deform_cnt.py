@@ -30,10 +30,15 @@ gromacs.write_gromacs(f'{directory}cnt_initial.gro', cnt) #.gro to lammps.gro so
 
 observing_traj = Trajectory(f'{directory}cnt.traj', 'w')
 
+def relax_structure(cell):
+    traj_relaxed_cell = Trajectory(f'{directory}relaxed_cell.log', 'w')
+    optimize = FIRE(cell, trajectory=f'{directory}relaxed_cell.traj')
+    optimize.run(fmax=10**-8)
+
 def deform_in_z(cnt, eps):
-    cnt_array = cnt.cell[:]
-    cnt_array_new = cnt_array + np.dot(cnt_array_original, (np.array([[0,0,0],[0,0,0],[0,0,eps]])))
-    cnt.set_cell(cnt_array_new, scale_atoms=True)
+    cnt_rel_array = cnt.cell[:]
+    cnt_array_new = cnt_rel_array + np.dot(cnt_array_original, (np.array([[0,0,0],[0,0,0],[0,0,eps]])))
+    cnt_rel.set_cell(cnt_array_new, scale_atoms=True)
 
 def printenergy(atoms=cnt):
      epot = atoms.get_potential_energy()
@@ -42,23 +47,22 @@ def printenergy(atoms=cnt):
      print(f'epot: {epot}, ekin: {ekin}, temperature: {temp}')
 
 def run_simulation(loop_number, step_number, timestep, eps,filename, start_deform=0):
-    dyn.attach(printenergy)
-    MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
-    Stationary(cnt)
-    dyn.run(500) #run before simulation (w/o recording data)
+    #MaxwellBoltzmannDistribution(cnt, temperature_K=0, force_temp=True)
+    #Stationary(cnt)
+    #dyn.run(500) #run before simulation (w/o recording data)
     #eqiliberate befor running
     for i in range(loop_number):
     
         loop_time = i*step_number
-        for step in range(start_deform): #for if we want to safe data before deforming
+        for step in range(start_deform): #for if we want to save data before deforming
                 dyn.run(1)
                 if (loop_time+step)%1 == 0:
                     data['time'].append((loop_time+step)*timestep)
                     data['temperature'].append(cnt.get_temperature())
-                    data['epot'].append(cnt.get_potential_energy())
-                    data['ekin'].append(cnt.get_kinetic_energy())
-                    data['etot'].append(cnt.get_total_energy())
-        deform_in_z(cnt, eps)
+                    data['epot'].append(cnt_rel.get_potential_energy())
+                    data['ekin'].append(cnt_rel.get_kinetic_energy())
+                    data['etot'].append(cnt_rel.get_total_energy())
+        deform_in_z(cnt_rel, eps)
         #dyn.attach(printenergy)
         for step in range(start_deform, step_number): 
             #MaxwellBoltzmannDistribution(cnt, temp_K=0)
@@ -66,16 +70,17 @@ def run_simulation(loop_number, step_number, timestep, eps,filename, start_defor
             dyn.run(1)
             if (loop_time+step)%1 == 0:
                 data['time'].append((loop_time+step)*timestep)
-                data['temperature'].append(cnt.get_temperature())
-                data['epot'].append(cnt.get_potential_energy())
-                data['ekin'].append(cnt.get_kinetic_energy())
-                data['etot'].append(cnt.get_total_energy())
+                data['temperature'].append(cnt_rel.get_temperature())
+                data['epot'].append(cnt_rel.get_potential_energy())
+                data['ekin'].append(cnt_rel.get_kinetic_energy())
+                data['etot'].append(cnt_rel.get_total_energy())
+                printenergy(cnt_rel)
                 if i%1 == 0:
-                    gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps.gro so ovito can show it
+                    gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt_rel) # dump to lammps.gro so ovito can show it
             
         print(f'Rep {i+1} of {loop_number}')
         if i%10 == 0:
-            gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps.gro so ovito can show it
+            gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt_rel) # dump to lammps.gro so ovito can show it
     with open(f'{data_directory}{filename}_data.json', 'w') as fp:
         json.dump(data, fp)
 
@@ -87,7 +92,7 @@ if __name__ == '__main__':
              print('no files in data dir')
 
     #adjustable variables 
-    strain_rate = 5*10**12 #s^-1 
+    strain_rate = 2*10**12#s^-1 
     #strain_rate = eps/(timestep * step_number*10**-15)
     start_deform = 0
     timestep = 0.1 #in fs
@@ -99,10 +104,14 @@ if __name__ == '__main__':
     total_strain = eps*loop_number
     filename = 'sr{sr:2.2e}_etot{etot:2.2e}_steps{steps}_loops{loops}'.format(sr=strain_rate, etot=total_strain,
                                                                                   steps=step_number, loops=loop_number)
-   
-    dyn = VelocityVerlet(cnt, timestep=timestep*units.fs)
+    relax_structure(cnt) 
+    traj_relax_read = Trajectory(f'{directory}relaxed_cell.traj', 'r')
+    cnt_rel = traj_relax_read[-1]
+    cnt_rel.calc = BrennerPotential()
+    
+    dyn = VelocityVerlet(cnt_rel, timestep=timestep*units.fs)
     data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
-    cnt_array_original = cnt.cell[:]
+    cnt_array_original = cnt_rel.cell[:]
     run_simulation(loop_number, step_number, timestep, eps, filename, start_deform) 
     with open(f'{data_directory}{filename}_data.json', 'r') as fp:
         data = json.load(fp)

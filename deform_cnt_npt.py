@@ -42,9 +42,8 @@ def printenergy(atoms=cnt):
      print(f'epot: {epot}, ekin: {ekin}, temperature: {temp}')
 
 def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
-    dyn.attach(printenergy)
-    dyn.run(100)
-    Stationary(cnt)
+    #dyn.run(100)
+    #Stationary(cnt)
     #eqiliberate befor running
     for i in range(loop_number):
             loop_time = i*step_number
@@ -67,6 +66,7 @@ def run_simulation(loop_number, step_number, timestep, eps, start_deform=0):
                     data['epot'].append(cnt.get_potential_energy())
                     data['ekin'].append(cnt.get_kinetic_energy())
                     data['etot'].append(cnt.get_total_energy())
+                    printenergy(cnt)
                     if i%1 == 0:
                         gromacs.write_gromacs(f'{data_directory}cnt_{i}.gro', cnt) # dump to lammps dump so ovito can show it
                 
@@ -93,6 +93,12 @@ if __name__ == '__main__':
     eps = strain_rate * timestep * (step_number-start_deform)*10**-15
     #eps = 0.001
     total_strain = eps*loop_number
+
+    # to save time we get the relaxed stucture from the nve sim
+    traj_relax_read = Trajectory(f'{directory}relaxed_cell.traj', 'r')
+    cnt = traj_relax_read[-1]
+    cnt.calc = BrennerPotential() #when reading from trajectory the potential gets lost... why? no idea 
+
     dyn = Langevin(cnt, timestep=timestep*units.fs,temperature_K=300, friction=0.1/units.fs)
     data = {'time':[],'temperature':[], 'epot':[],'ekin':[], 'etot': []}
     cnt_array_original = cnt.cell[:]
