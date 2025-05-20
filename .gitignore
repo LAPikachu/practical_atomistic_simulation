@@ -8,4 +8,7 @@ config_out
 {directory}*
 data_CNT_sim/*
 data_CNT_sim/nve_deform/*
+data_min_energy/*
 *.ss
+
+
