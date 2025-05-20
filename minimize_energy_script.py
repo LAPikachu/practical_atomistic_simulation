@@ -3,12 +3,14 @@
 import numpy as np
 import matplotlib.pyplot as plt 
 import json
+import csv
 from scipy.optimize import curve_fit, root_scalar
 from ase.calculators.emt import EMT
 #from asap3 import EMT
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 import os
+from tqdm import tqdm, trange
 
 '''
 List of crystal lattice types
@@ -20,9 +22,9 @@ lattice_types = ['sc', 'fcc', 'bcc']
 
 #dictionary of initial values for lattice constants (all in Angstrom)
 #in task 3.1 you estimated values for the lattice constants, insert in the dictionary the below
-L_init_values = {'sc' : None,
-                 'fcc' : None,
-                 'bcc' : None}
+L_init_values = {'sc' : 1, 
+                 'fcc' : 1,
+                 'bcc': 1}
 
 def create_cubic_lattice(lattice_type, L):
     switch_dict = {'sc' : SimpleCubic('Cu', latticeconstant=L, size=(1,1,1)),
@@ -34,7 +36,13 @@ def calculate_latticeconst_epot_traj(lattice_type, L_init):
     os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
     traj_file = Trajectory(f'data_min_energy/{lattice_type}.traj', 'w')
     lattice_constants_list = []
-    for L in np.linspace(L_init - 0.3 , L_init + 0.3, 300):
+    L_high = L_init + 0.3 
+    L_low = L_init - 0.3 
+    N = 300
+    iterator_values = np.linspace(L_low, L_high, N)
+    print(f'\n\n\nLattice type : {lattice_type}')
+    print(f"Calculating {N} data point for lattice constants {L_low:.2f} to {L_high:.2f}")
+    for L in tqdm(iterator_values):
         lattice_constants_list.append(L) # append current lattice constant
         data = create_cubic_lattice(lattice_type, L)
         data.calc = EMT()
@@ -45,7 +53,6 @@ def calculate_latticeconst_epot_traj(lattice_type, L_init):
 def write_data_dict(lattice_type ,lattice_constants_list):
     data_dict = {}
     L_init = L_init_values[lattice_type]
-    calculate_latticeconst_epot_traj(lattice_type, L_init)
     os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
     configs = read(f'data_min_energy/{lattice_type}.traj@0:', 'r') #@0:  go though all the saved configurations
     epots_list = [data.get_potential_energy() for data in configs] #list potential energies
@@ -57,6 +64,16 @@ def save_data_to_json(data_dict, filename):
 
     with open(filename, 'w') as data:
         json.dump(data_dict, data)
+
+def write_to_csv(lattice_type, strains, energy_densities):
+    os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
+    with open(f'data_min_energy/{lattice_type}_strain_energydensity.csv', 'w', newline='') as new_csv:
+        newarray = csv.writer(new_csv, delimiter=",")
+        newarray.writerow(["strain in angstrom", "energy density in eV/Angstrom^3"])
+        data =  []
+        for strain, energy_density in zip(strains, energy_densities):
+            data.append([strain, energy_density])
+        newarray.writerows(data)
 
 def fit_L_min_epot(func, dfunc, data_dict):
     fitting_params = {}
@@ -87,51 +104,14 @@ if __name__ =='__main__':
         L_init = L_init_values[lattice_type]
         lattice_constants_list = calculate_latticeconst_epot_traj(lattice_type, L_init)
         data_dict[lattice_type] = write_data_dict(lattice_type, lattice_constants_list)
-    os.makedirs(os.path.dirname('/data_min_energy'))
+    os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
     save_data_to_json(data_dict, 'data_min_energy/epot_latticeconst')
 
     with open('data_min_energy/epot_latticeconst', 'r') as data:
        data_dict = json.load(data)
+    print("\n\n\n")
+    for lattice_type in lattice_types:
+        strains, energy_densities = data_dict[lattice_type]
+        write_to_csv(lattice_type, strains, energy_densities)
     #plot the data
-    fig1, ax1 = plt.subplots()
-    ax1.set_xlabel('Lattice constant in Angstrom')
-    ax1.set_ylabel('Potential energy in eV')
-    # for plotting
-    for lattice_type, marker_type in zip(lattice_types, ['1','<','x']):
-        x,y = data_dict[lattice_type]
-        ax1.plot(x, y, marker_type , label = f'{lattice_type} lattice')
-    ax1.legend()
-    #fit it to a 2nd order polynomial
-    #for making the method dynamic we initialize p as a list
-    def W_2nd_ord(L, p_0, p_1, p_2):
-        return p_0 + p_1* L + p_2 * L**2
-    #derivative of function
-    #p is not a variable since scip.optimiz.root_scalar should not fit over it
-    def dW_2nd(L, p_array):
-        return p_array[0] + 2 * p_array[1]* L  
-    
-    roots_dict, func_name = fit_L_min_epot(W_2nd_ord, dW_2nd, data_dict)
-    roots_fit_dict = {}
-    roots_fit_dict[func_name] = roots_dict
-    '''
-    fit is not really optimal
-    2nd ord poly not ideal for theses kinds of curvature?
-    '''
-    '''
-    def W_3rd_ord(L, p_0, p_1, p_2, p_3):
-        return p_0 + p_1 * L + p_2 * L ** 2 + p_3 * L ** 3
-    
-    def dW_3rd_ord(L, p_array):
-        return p_array[0] + 2 * p_array[1] * L + 3 * p_array[2] * L**2
-    
-    roots_dict, func_name = fit_L_min_epot(W_3rd_ord, dW_3rd_ord, data_dict)
-    
-    roots_fit_dict[func_name] = roots_dict
-    
-    save_data_to_json(roots_fit_dict, 'data_min_energy/lattice_consts')
-    '''
-    fig1.show()
-    print("Lattice constants: \n"
-        "Simple Cubic : {L_sc} Angstrom \n Face Centered Cubic : {L_fcc} Angstrom"
-        "\nBody Centered Cubic : {L_bcc} Angstrom".format(L_sc=roots_dict['sc'],
-                                                L_fcc=roots_dict['fcc'], L_bcc=roots_dict['bcc']))
+        print(f"Strain vs energy density written to csv-files to file 'data_min_energy/{lattice_type}_strain_energydensity.csv'")
