@@ -10,7 +10,7 @@ from ase.calculators.emt import EMT
 from ase.lattice.cubic import FaceCenteredCubic, BodyCenteredCubic, SimpleCubic
 from ase.io import Trajectory, read
 import os
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 '''
 List of crystal lattice types
@@ -41,7 +41,7 @@ def calculate_latticeconst_epot_traj(lattice_type, L_init):
     N = 300
     iterator_values = np.linspace(L_low, L_high, N)
     print(f'\n\n\nLattice type : {lattice_type}')
-    print(f"Calculating {N} data point for lattice constants {L_low:.2f} to {L_high:.2f}")
+    print(f"Calculating {N} data points for lattice constants {L_low:.2f} to {L_high:.2f}")
     for L in tqdm(iterator_values):
         lattice_constants_list.append(L) # append current lattice constant
         data = create_cubic_lattice(lattice_type, L)
@@ -69,7 +69,7 @@ def write_to_csv(lattice_type, strains, energy_densities):
     os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
     with open(f'data_min_energy/{lattice_type}_strain_energydensity.csv', 'w', newline='') as new_csv:
         newarray = csv.writer(new_csv, delimiter=",")
-        newarray.writerow(["strain in angstrom", "energy density in eV/Angstrom^3"])
+        newarray.writerow(["lattice constant in angstrom", "energy density in eV/Angstrom^3"])
         data =  []
         for strain, energy_density in zip(strains, energy_densities):
             data.append([strain, energy_density])
