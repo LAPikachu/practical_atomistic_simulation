@@ -67,7 +67,7 @@ def save_data_to_json(data_dict, filename):
 
 def write_to_csv(lattice_type, strains, energy_densities):
     os.makedirs(os.path.dirname('/data_min_energy'), exist_ok=True)
-    with open(f'data_min_energy/{lattice_type}_strain_energydensity.csv', 'w', newline='') as new_csv:
+    with open(f'data_min_energy/{lattice_type}_latticeconst_energydensity.csv', 'w', newline='') as new_csv:
         newarray = csv.writer(new_csv, delimiter=",")
         newarray.writerow(["lattice constant in angstrom", "energy density in eV/Angstrom^3"])
         data =  []
@@ -114,4 +114,4 @@ if __name__ =='__main__':
         strains, energy_densities = data_dict[lattice_type]
         write_to_csv(lattice_type, strains, energy_densities)
     #plot the data
-        print(f"Strain vs energy density written to csv-files to file 'data_min_energy/{lattice_type}_strain_energydensity.csv'")
+        print(f"Strain vs energy density written to csv-files to file 'data_min_energy/{lattice_type}_latticeconst_energydensity.csv'")
